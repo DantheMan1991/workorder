@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+.DS_Store
+.env
+.env.local
+server/data/db.json
+coverage/
+.vite/
+
+# TS build info
+*.tsbuildinfo
