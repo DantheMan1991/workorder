@@ -23,7 +23,7 @@ That writes three files into `out/`:
 | File | What it is |
 |---|---|
 | `Philips_JobCost_Reallocated.xlsx` | Six tabs: work packages, cost sitting on the wrong line, per-code detail, every reallocation with its reason, before/after, and the flags |
-| `job_cost_dashboard.html` | The one-screen read — headline position, the six trades, all 52 work packages, cost sitting on the wrong line, flags, and crew hours |
+| `job_cost_dashboard.html` | The one-screen read — headline position, the six trades, all 51 work packages, cost sitting on the wrong line, flags, and crew hours |
 | `summary.json` | The numbers behind both of the above |
 
 ## Changing how codes group into packages
@@ -34,8 +34,9 @@ That writes three files into `out/`:
   `06.110 - Interior Door Doors, Trim and Stairs Material` loses `Material` and lands in
   the `Interior Door Doors, Trim and Stairs` package. Longest match wins, so
   `Equipment Fuel` is stripped before `Equipment`.
-- **`aliases`** — merges two package names into one. `Public/Private Sewer` folds into
-  `Public Sewer`; add a line to merge any other pair.
+- **`aliases`** — merges two package names into one, following chains. `Public/Private Sewer`
+  folds into `Public Sewer`, and `Concrete Porch Concrete` → `Concrete Porch` → `Porch` puts
+  the porch concrete sub in with the porch labor and mileage. Add a line to merge any other pair.
 
 ## Changing where a retired code lands
 

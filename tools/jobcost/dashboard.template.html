@@ -98,21 +98,24 @@ section + section{border-top:1px solid var(--rule-soft)}
   .row{grid-template-columns:1fr auto;}
   .row .track,.row .bullet{grid-column:1/-1}
 }
-.track{height:16px;background:var(--rule-soft);border-radius:3px;display:flex;overflow:hidden}
+.track{height:16px;display:flex}
 .track i{display:block;height:100%}
 .track i + i{margin-left:2px}
-.seg-ok{background:var(--accent-mark);border-radius:0 3px 3px 0}
-.seg-rev{background:var(--warn);border-radius:0 3px 3px 0}
+.track i:last-child{border-radius:0 4px 4px 0}
+.seg-ok{background:var(--accent-mark)}
 
 /* bullet (budget vs spent) */
 .bullet{position:relative;height:22px}
-.bullet .bar{position:absolute;inset:0;display:flex;background:var(--rule-soft);border-radius:3px;overflow:hidden}
-.bullet .bar i{height:100%}
+/* No background track. A shared scale across 51 packages leaves most of the row empty, and a
+   filled track there reads as budget still to spend. Only drawn segments are money. */
+.bullet .bar{position:absolute;inset:0;display:flex}
+.bullet .bar i{height:100%;min-width:3px}
 .bullet .bar i + i{margin-left:2px}
+.bullet .bar i:last-child{border-radius:0 4px 4px 0}
 .b-spent{background:var(--accent-mark)}
-.b-togo{background:var(--wash-accent)}
+.b-togo{background:var(--accent-soft)}
 .b-over{background:var(--bad)}
-.b-overtogo{background:var(--wash-bad)}
+.bullet .rule{position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--rule-soft)}
 .bullet .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
 .bullet .tick::after{content:"";position:absolute;inset:-6px -7px;}
 
@@ -275,7 +278,7 @@ footer code{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);overflow
     <div class="card pad">
       <div class="legend">
         <span><i class="sw" style="background:var(--accent-mark)"></i>Spent</span>
-        <span><i class="sw" style="background:var(--wash-accent)"></i>Left to spend</span>
+        <span><i class="sw" style="background:var(--accent-soft)"></i>Left to spend</span>
         <span><i class="sw" style="background:var(--bad)"></i>Already spent past budget</span>
         <span><i class="sw line" style="background:var(--ink)"></i>Revised budget</span>
       </div>
@@ -448,8 +451,9 @@ function paintTrades() {
 
 /* ---------- packages ---------- */
 document.getElementById("pack-sub").textContent =
-  `${D.counts.codes} cost codes collapse to ${P.length} packages. The tick marks the revised budget; `
-  + `anything past it is spend the package's own budget cannot cover.`;
+  `${D.counts.codes} cost codes collapse to ${P.length} packages. Bars share one scale across the `
+  + `whole job, so a short bar is a small package. The tick on each marks that package's revised `
+  + `budget, and anything past the tick is spend its own budget cannot cover.`;
 const catSel = document.getElementById("cat");
 TRADES.forEach(c => { const o = document.createElement("option"); o.value = o.textContent = c;
   catSel.appendChild(o); });
@@ -479,7 +483,10 @@ function paintPackages() {
     const nm = el("div", "nm", p.name);
     const kinds = p.lines.map(l => l.kind).join(", ");
     nm.appendChild(el("small", null,
-      `${p.lines.length} cost code${p.lines.length === 1 ? "" : "s"}`));
+      `${p.lines.length} cost code${p.lines.length === 1 ? "" : "s"}`
+      + (!p.rb ? " · no budget set"
+         : !p.ac ? " · nothing spent yet"
+         : ` · ${pct(p.ac / p.rb)} of budget spent`)));
     nm.title = kinds;
     const bullet = el("div", "bullet"), bar = el("div", "bar");
     const spent = Math.min(p.ac, p.rb), spentOver = Math.max(p.ac - p.rb, 0);

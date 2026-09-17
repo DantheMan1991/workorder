@@ -255,12 +255,20 @@ def build_packages(cats, after, rules):
     types = sorted(rules["cost_types"], key=len, reverse=True)
     aliases = rules["aliases"]
 
+    def resolve(name):
+        """Follow an alias chain so a package can be merged into one that is itself merged."""
+        seen = {name}
+        while name in aliases and aliases[name] not in seen:
+            name = aliases[name]
+            seen.add(name)
+        return name
+
     def split(code):
         t = re.sub(r"^[\d.]+\s*-\s*", "", code).strip()
         for suf in types:
             if t.endswith(" " + suf):
-                return aliases.get(t[: -len(suf) - 1].strip(), t[: -len(suf) - 1].strip()), suf
-        return aliases.get(t, t), "Other"
+                return resolve(t[: -len(suf) - 1].strip()), suf
+        return resolve(t), "Other"
 
     packs = {}
     for cat in cats:
