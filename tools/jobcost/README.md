@@ -38,6 +38,25 @@ That writes three files into `out/`:
   folds into `Public Sewer`, and `Concrete Porch Concrete` → `Concrete Porch` → `Porch` puts
   the porch concrete sub in with the porch labor and mileage. Add a line to merge any other pair.
 
+## Correcting a transaction on the wrong cost code
+
+`code_corrections.json` holds individual corrections you have confirmed — "that bill went
+to the wrong budget". Each entry names the code it is on, the code it belongs on, and the
+transactions by document reference and exact amount:
+
+```json
+{ "from": "04.115 - Framing Subcontractor",
+  "to":   "04.200 - Siding Subcontractor",
+  "reason": "Siding subcontractor invoices billed against the framing budget.",
+  "stated_by": "Dan",
+  "items": [ { "title": "Bill: 019079", "amount": 21451.50 } ] }
+```
+
+Matching is on title **and** amount, so a correction that no longer matches the export is
+reported on stderr rather than applied to the wrong row. These outrank anything the script
+infers, and the code they move cost *onto* is marked as confirmed so it is not then
+reported as miscoded.
+
 ## Changing where a retired code lands
 
 Every mapping decision lives in `cost_code_map.json` — nothing is hard-coded in the
@@ -83,4 +102,6 @@ the script leaves that blank rather than inventing a projection, and flags it.
 
 `find_miscodes` is separate and reports the opposite case: a line carrying far more than
 its own budget while a sibling line in the same package sits unspent. The package absorbs
-it, so it is not an overrun — but it is what to re-code.
+it, so it is not an overrun — but it is what to re-code. A line that received a confirmed
+correction is marked rather than listed as a coding error: the code is right, and what is
+off is the budget split inside the package.

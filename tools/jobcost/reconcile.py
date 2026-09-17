@@ -94,14 +94,15 @@ def reallocate(cats, mapping):
                 moves.append({"from_category": cat["name"], "from_code": src["code"],
                               "to_code": target, "to_category": by_code[target]["category"],
                               "entity": item["entity"], "title": item["title"],
-                              "confidence": conf, "basis": basis, **amt})
+                              "confidence": conf, "source": "retired-code", "basis": basis, **amt})
             # Budget/change-order money sitting on the code itself but on no line item.
             residual = {k: round(z(src[k]) - sum(z(i[k]) for i in src["items"]), 2) for k in MONEY}
             if any(abs(v) > 0.005 for v in residual.values()):
                 moves.append({"from_category": cat["name"], "from_code": src["code"],
                               "to_code": rule["to"], "to_category": by_code[rule["to"]]["category"],
                               "entity": "Code total", "title": "(unitemised balance on code)",
-                              "confidence": rule["confidence"], "basis": rule["basis"], **residual})
+                              "confidence": rule["confidence"], "source": "retired-code",
+                              "basis": rule["basis"], **residual})
 
     unused = [o for lst in overrides.values() for o in lst if not o["used"]]
     if unused:
@@ -245,6 +246,43 @@ def labor_breakdown(cats):
             "total": {k: round(v, 2) for k, v in total.items()}}
 
 
+def apply_corrections(cats, rules):
+    """Move named transactions off a cost code they were posted to by mistake.
+
+    These are corrections a person has confirmed, so they outrank anything inferred. A
+    correction that matches nothing in the export is reported rather than dropped - the
+    export has changed and the rule needs revisiting.
+    """
+    by_code = index_codes(cats)
+    moves, missing = [], []
+    for rule in rules["corrections"]:
+        src, dst = by_code.get(rule["from"]), by_code.get(rule["to"])
+        if src is None or dst is None:
+            missing.append(f"{rule['from']} -> {rule['to']} (cost code not in this export)")
+            continue
+        for want in rule["items"]:
+            hit = next((i for i in src["items"]
+                        if i["title"] == want["title"]
+                        and abs(z(i["ac"]) - want["amount"]) < 0.005
+                        and not i.get("_corrected")), None)
+            if hit is None:
+                missing.append(f"{rule['from']}: {want['title']} @ {want['amount']:,.2f}")
+                continue
+            hit["_corrected"] = True
+            who = rule.get("stated_by")
+            moves.append({"from_category": src["category"], "from_code": src["code"],
+                          "to_code": dst["code"], "to_category": dst["category"],
+                          "entity": hit["entity"], "title": hit["title"],
+                          "confidence": "stated", "source": "correction",
+                          "basis": rule["reason"] + (f" Confirmed by {who}." if who else ""),
+                          **{k: z(hit[k]) for k in MONEY}})
+    if missing:
+        print(f"  ! {len(missing)} correction(s) matched nothing:", file=sys.stderr)
+        for m in missing:
+            print(f"    {m}", file=sys.stderr)
+    return moves
+
+
 def build_packages(cats, after, rules):
     """Group cost codes into work packages and do the budget arithmetic on the group.
 
@@ -293,12 +331,13 @@ def build_packages(cats, after, rules):
     return sorted(packs.values(), key=lambda p: (p["category"], -p["projected"]))
 
 
-def find_miscodes(packs, floor=2000.0):
+def find_miscodes(packs, moves, floor=2000.0):
     """Lines carrying far more than their own budget while a sibling line sits unspent.
 
     The package total absorbs these, so they are not overruns - they are cost sitting on
     the wrong line, and they are what makes a per-code report unreadable.
     """
+    confirmed = {m["to_code"] for m in moves if m.get("source") == "correction"}
     out = []
     for p in packs:
         if p["var"] < -0.5 or len(p["lines"]) < 2:
@@ -313,7 +352,8 @@ def find_miscodes(packs, floor=2000.0):
                         "kind": l["kind"], "rb": l["rb"], "ac": l["ac"], "over": round(over, 2),
                         "spare_code": spare[0]["code"] if spare else None,
                         "spare_kind": spare[0]["kind"] if spare else None,
-                        "spare": round(spare[0]["rb"] - spare[0]["ac"], 2) if spare else 0.0})
+                        "spare": round(spare[0]["rb"] - spare[0]["ac"], 2) if spare else 0.0,
+                        "confirmed_here": l["code"] in confirmed})
     return sorted(out, key=lambda m: -m["over"])
 
 
@@ -460,12 +500,14 @@ def write_xlsx(summary, path):
                 cell.font = Font(bold=True)
 
     sheet(wb.create_sheet("Reallocations"),
-          ["From category", "From code", "To code", "To category", "Confidence", "Type",
+          ["Why", "From category", "From code", "To code", "To category", "Confidence", "Type",
            "Reference", "Original Budget", "Revised Budget", "Actual", "Cost To Complete", "Basis"],
-          [[m["from_category"], m["from_code"], m["to_code"], m["to_category"], m["confidence"].upper(),
-            m["entity"], m["title"], m["ob"], m["rb"], m["ac"], m["ctc"], m["basis"]]
-           for m in summary["moves"]],
-          [30, 20, 44, 22, 12, 24, 30, 15, 15, 15, 15, 80])
+          [[("Wrong code" if m.get("source") == "correction" else "Retired code"),
+            m["from_category"], m["from_code"], m["to_code"], m["to_category"],
+            m["confidence"].upper(), m["entity"], m["title"], m["ob"], m["rb"], m["ac"], m["ctc"],
+            m["basis"]]
+           for m in sorted(summary["moves"], key=lambda m: m.get("source", ""))],
+          [14, 30, 34, 34, 22, 12, 24, 30, 15, 15, 15, 15, 80])
 
     sheet(wb.create_sheet("Before vs After"),
           ["Cost code", "Category", "Actual (as exported)", "Actual (reallocated)", "Change",
@@ -498,11 +540,13 @@ def main():
     mapping = json.loads(Path(args.map).read_text())
 
     packrules = json.loads((HERE / "work_packages.json").read_text())
+    fixes = json.loads((HERE / "code_corrections.json").read_text())
     cats = load(args.export)
-    moves = reallocate(cats, mapping)
+    moves = reallocate(cats, mapping) + apply_corrections(cats, fixes)
     after = apply_moves(cats, moves)
     packs = build_packages(cats, after, packrules)
-    summary = summarise(cats, moves, after, mapping, packs, find_miscodes(packs), args.export)
+    summary = summarise(cats, moves, after, mapping, packs,
+                        find_miscodes(packs, moves), args.export)
 
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
     xlsx = out / "Philips_JobCost_Reallocated.xlsx"
@@ -516,8 +560,10 @@ def main():
     b, a = summary["totals"]["before"], summary["totals"]["after"]
     print(f"  {summary['counts']['rows']:,} rows -> {summary['counts']['codes']} cost codes "
           f"({summary['counts']['legacy_codes']} legacy)")
+    fixed = [m for m in moves if m.get("source") == "correction"]
     print(f"  {len(moves)} transactions moved, "
-          f"${sum(z(m['ac']) for m in moves):,.2f} of actual cost")
+          f"${sum(z(m['ac']) for m in moves):,.2f} of actual cost"
+          f"  ({len(fixed)} confirmed corrections, ${sum(z(m['ac']) for m in fixed):,.2f})")
     print(f"  actual  {b['ac']:>14,.2f} -> {a['ac']:>14,.2f}")
     print(f"  to go   {b['ctc']:>14,.2f} -> {a['ctc']:>14,.2f}")
     print(f"  variance{b['rvp']:>14,.2f} -> {a['rvp']:>14,.2f}")

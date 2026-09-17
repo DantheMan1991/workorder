@@ -1,0 +1,16 @@
+{
+  "_readme": "Transactions posted to the wrong cost code. Unlike cost_code_map.json (which handles the retired letter codes wholesale), these are individual corrections you have confirmed - one entry per 'that bill went to the wrong budget'. Matched on the document reference and the exact amount, so a correction that no longer matches the export is reported rather than applied silently.",
+  "corrections": [
+    {
+      "from": "04.115 - Framing Subcontractor",
+      "to": "04.200 - Siding Subcontractor",
+      "reason": "Siding subcontractor invoices billed against the framing budget.",
+      "stated_by": "Dan",
+      "items": [
+        { "title": "Bill: 019079", "amount": 21451.50 },
+        { "title": "Bill: 019074", "amount": 5974.50 },
+        { "title": "Bill: 014997", "amount": 29998.50 }
+      ]
+    }
+  ]
+}

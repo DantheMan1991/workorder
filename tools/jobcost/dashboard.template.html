@@ -292,7 +292,7 @@ footer code{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);overflow
     <p class="sec-sub" id="mis-sub"></p>
     <div class="card" style="margin-top:20px"><div class="scroll"><table id="mis-table">
       <thead><tr><th>This code is carrying it</th><th class="n">Its budget</th><th class="n">Its actual</th>
-        <th class="n">Excess</th><th>Room sits here instead</th></tr></thead><tbody></tbody></table></div></div>
+        <th class="n">Excess</th><th>Unspent room in the package</th></tr></thead><tbody></tbody></table></div></div>
   </section>
 
   <section id="flags">
@@ -514,18 +514,26 @@ function paintPackages() {
   document.getElementById(id).addEventListener("input", paintPackages));
 
 /* ---------- miscoded ---------- */
-const misTotal = D.miscodes.reduce((s, m) => s + m.over, 0);
-document.getElementById("mis-sub").textContent = D.miscodes.length
-  ? `${usd(misTotal)} is booked to a code that has no budget for it while another code in the same `
-    + `package sits unspent — the trim mileage line carrying material invoices is the clearest case. `
+const openMis = D.miscodes.filter(m => !m.confirmed_here);
+const misTotal = openMis.reduce((s, m) => s + m.over, 0);
+const fixes = D.moves.filter(m => m.source === "correction");
+const fixTotal = fixes.reduce((s, m) => s + m.ac, 0);
+document.getElementById("mis-sub").innerHTML = D.miscodes.length
+  ? `${usd(misTotal)} sits on a code that has no room left for it while another code in the same `
+    + `package goes unspent — the trim mileage line carrying material invoices is the clearest case. `
     + `None of this changes what the job costs, and none of it shows up as an overrun above, but `
     + `re-coding it is what makes a per-code report readable again.`
+    + (fixes.length ? `<br><br>${fixes.length} transaction${fixes.length === 1 ? " has" : "s have"} `
+        + `already been moved by hand — ${usd(fixTotal)} — and those rows are marked below: the code `
+        + `is where you put it, so what is off there is the budget split inside the package, not the `
+        + `coding.` : "")
   : "Nothing found.";
 const misBody = document.querySelector("#mis-table tbody");
 D.miscodes.forEach(m => {
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td><span class="code">${m.code}</span><br><span class="cat-tag">${m.package} · `
-    + `${m.category}</span></td>
+  tr.innerHTML = `<td><span class="code">${m.code}</span>`
+    + (m.confirmed_here ? ` <span class="chip high">You placed this</span>` : "")
+    + `<br><span class="cat-tag">${m.package} · ${m.category}</span></td>
     <td class="n">${m.rb ? usd(m.rb) : "none"}</td><td class="n">${usd(m.ac)}</td>
     <td class="n neg">${usd(m.over)}</td>
     <td>${m.spare_code ? `<span class="code">${m.spare_code}</span><br>`
