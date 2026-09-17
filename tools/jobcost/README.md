@@ -23,7 +23,7 @@ That writes three files into `out/`:
 | File | What it is |
 |---|---|
 | `Philips_JobCost_Reallocated.xlsx` | Six tabs: work packages, cost sitting on the wrong line, per-code detail, every reallocation with its reason, before/after, and the flags |
-| `job_cost_dashboard.html` | The one-screen read — headline position, the six trades, all 51 work packages, cost sitting on the wrong line, flags, and crew hours |
+| `job_cost_dashboard.html` | The one-screen read — headline position, the six trades, all 52 work packages, cost sitting on the wrong line, flags, and crew hours |
 | `summary.json` | The numbers behind both of the above |
 
 ## Changing how codes group into packages
@@ -52,7 +52,24 @@ transactions by document reference and exact amount:
   "items": [ { "title": "Bill: 019079", "amount": 21451.50 } ] }
 ```
 
-Matching is on title **and** amount, so a correction that no longer matches the export is
+The same file's `splits` block carves estimate lines off a code onto a line of their own —
+for a budget estimated onto whatever code was nearest. The new line is not in the export, so
+it is marked synthetic and kept out of the export's row and code counts:
+
+```json
+{ "from": "07.60 - Supervisor Mileage",
+  "to_code": "07.60a - Mobilization and/or Lodging",
+  "to_package": "Mobilization and/or Lodging",
+  "reason": "Mobilization and lodging is not supervisor mileage.",
+  "stated_by": "Dan",
+  "items": [ { "title": "MOBILIZATION AND OR LODGING", "original_budget": 45000.00 } ] }
+```
+
+`revised_budget` defaults to `original_budget`; set it explicitly where change orders have
+moved the two apart. Splits are checked against the source code's revised budget, so they
+cannot carve out more than is there.
+
+Matching is on title **and** amount throughout, so a rule that no longer matches the export is
 reported on stderr rather than applied to the wrong row. These outrank anything the script
 infers, and the code they move cost *onto* is marked as confirmed so it is not then
 reported as miscoded.

@@ -1,5 +1,5 @@
 {
-  "_readme": "Transactions posted to the wrong cost code. Unlike cost_code_map.json (which handles the retired letter codes wholesale), these are individual corrections you have confirmed - one entry per 'that bill went to the wrong budget'. Matched on the document reference and the exact amount, so a correction that no longer matches the export is reported rather than applied silently.",
+  "_readme": "Two kinds of fix, both confirmed by a person, both outranking anything the script infers. 'corrections' move transactions off a cost code they were posted to by mistake. 'splits' carve estimate lines off a code onto a line of their own, for a budget that was estimated onto whatever code was nearest. Both match on the exact amount, so a rule that no longer matches the export is reported rather than applied silently.",
   "corrections": [
     {
       "from": "04.115 - Framing Subcontractor",
@@ -7,9 +7,37 @@
       "reason": "Siding subcontractor invoices billed against the framing budget.",
       "stated_by": "Dan",
       "items": [
-        { "title": "Bill: 019079", "amount": 21451.50 },
-        { "title": "Bill: 019074", "amount": 5974.50 },
-        { "title": "Bill: 014997", "amount": 29998.50 }
+        {
+          "title": "Bill: 019079",
+          "amount": 21451.5
+        },
+        {
+          "title": "Bill: 019074",
+          "amount": 5974.5
+        },
+        {
+          "title": "Bill: 014997",
+          "amount": 29998.5
+        }
+      ]
+    }
+  ],
+  "splits": [
+    {
+      "from": "07.60 - Supervisor Mileage",
+      "to_code": "07.60a - Mobilization and/or Lodging",
+      "to_package": "Mobilization and/or Lodging",
+      "reason": "Mobilization and lodging is not supervisor mileage. It was estimated onto that code for want of one of its own, and wants its own line.",
+      "stated_by": "Dan",
+      "items": [
+        {
+          "title": "MOBILIZATION AND OR LODGING",
+          "original_budget": 45000.0
+        },
+        {
+          "title": "MOBILIZATION AND OR LODGING",
+          "original_budget": 6000.0
+        }
       ]
     }
   ]

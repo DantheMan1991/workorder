@@ -165,7 +165,7 @@ def find_anomalies(cats, moves, after, packs):
     dupes = {}
     for c in by_code.values():
         m = re.match(r"^(\d+\.\d+)", c["code"])
-        if m:
+        if m and not c.get("synthetic"):
             dupes.setdefault(m.group(1), []).append(c)
     for number, codes in dupes.items():
         if len(codes) < 2:
@@ -283,6 +283,57 @@ def apply_corrections(cats, rules):
     return moves
 
 
+def apply_splits(cats, rules):
+    """Carve estimate lines off a cost code onto a line of their own.
+
+    For a budget that was estimated onto whatever code was nearest - mobilization and
+    lodging sitting on supervisor mileage - and should stand as its own line instead.
+    The new line is not in the export, so it is marked synthetic and kept out of the
+    export's own row and code counts.
+    """
+    by_code = index_codes(cats)
+    by_cat = {c["name"]: c for c in cats}
+    moves, missing = [], []
+    for rule in rules.get("splits", []):
+        src = by_code.get(rule["from"])
+        if src is None:
+            missing.append(f"{rule['from']} (cost code not in this export)")
+            continue
+        dst = by_code.get(rule["to_code"])
+        if dst is None:
+            dst = {"code": rule["to_code"], "row": src["row"], "category": src["category"],
+                   "proj": src["proj"], "items": [], "synthetic": True,
+                   "_package": rule.get("to_package"),
+                   "ob": 0.0, "rb": 0.0, "ac": 0.0, "ctc": 0.0, "rvp": 0.0}
+            by_cat[src["category"]]["codes"].append(dst)
+            by_code[dst["code"]] = dst
+        for want in rule["items"]:
+            ob = want["original_budget"]
+            rb = want.get("revised_budget", ob)
+            hit = next((i for i in src["items"]
+                        if str(i["title"]).strip() == want["title"].strip()
+                        and abs(z(i["ob"]) - ob) < 0.005 and not i.get("_split")), None)
+            if hit is None:
+                missing.append(f"{rule['from']}: {want['title']} @ {ob:,.2f}")
+                continue
+            hit["_split"] = True
+            who = rule.get("stated_by")
+            moves.append({"from_category": src["category"], "from_code": src["code"],
+                          "to_code": dst["code"], "to_category": dst["category"],
+                          "entity": hit["entity"], "title": hit["title"],
+                          "confidence": "stated", "source": "split",
+                          "basis": rule["reason"] + (f" Confirmed by {who}." if who else ""),
+                          "ob": ob, "rb": rb, "ac": 0.0, "ctc": 0.0})
+        short = z(src["rb"]) - sum(m["rb"] for m in moves if m["from_code"] == src["code"])
+        if short < -0.005:
+            missing.append(f"{rule['from']}: splits exceed its revised budget by ${-short:,.2f}")
+    if missing:
+        print(f"  ! {len(missing)} split(s) matched nothing:", file=sys.stderr)
+        for m in missing:
+            print(f"    {m}", file=sys.stderr)
+    return moves
+
+
 def build_packages(cats, after, rules):
     """Group cost codes into work packages and do the budget arithmetic on the group.
 
@@ -314,6 +365,7 @@ def build_packages(cats, after, rules):
             if is_legacy(c["code"]):
                 continue
             name, kind = split(c["code"])
+            name = c.get("_package") or name
             a = after[c["code"]]
             p = packs.setdefault(name, {"name": name, "category": cat["name"], "lines": []})
             p["lines"].append({"code": c["code"], "kind": kind,
@@ -414,8 +466,11 @@ def summarise(cats, moves, after, mapping, packs, miscodes, source):
         },
         "anomalies": find_anomalies(cats, moves, after, packs),
         "labor": labor_breakdown(cats),
-        "counts": {"rows": sum(1 + len(c["items"]) for c in by_code.values()) + len(cats),
-                   "codes": len(by_code), "legacy_codes": sum(1 for c in by_code if is_legacy(c)),
+        "counts": {"rows": sum(1 + len(c["items"]) for c in by_code.values()
+                              if not c.get("synthetic")) + len(cats),
+                   "codes": sum(1 for c in by_code.values() if not c.get("synthetic")),
+                   "split_lines": sum(1 for c in by_code.values() if c.get("synthetic")),
+                   "legacy_codes": sum(1 for c in by_code if is_legacy(c)),
                    "line_items": sum(len(c["items"]) for c in by_code.values())},
     }
 
@@ -502,7 +557,7 @@ def write_xlsx(summary, path):
     sheet(wb.create_sheet("Reallocations"),
           ["Why", "From category", "From code", "To code", "To category", "Confidence", "Type",
            "Reference", "Original Budget", "Revised Budget", "Actual", "Cost To Complete", "Basis"],
-          [[("Wrong code" if m.get("source") == "correction" else "Retired code"),
+          [[{"correction": "Wrong code", "split": "Split out"}.get(m.get("source"), "Retired code"),
             m["from_category"], m["from_code"], m["to_code"], m["to_category"],
             m["confidence"].upper(), m["entity"], m["title"], m["ob"], m["rb"], m["ac"], m["ctc"],
             m["basis"]]
@@ -542,7 +597,7 @@ def main():
     packrules = json.loads((HERE / "work_packages.json").read_text())
     fixes = json.loads((HERE / "code_corrections.json").read_text())
     cats = load(args.export)
-    moves = reallocate(cats, mapping) + apply_corrections(cats, fixes)
+    moves = reallocate(cats, mapping) + apply_corrections(cats, fixes) + apply_splits(cats, fixes)
     after = apply_moves(cats, moves)
     packs = build_packages(cats, after, packrules)
     summary = summarise(cats, moves, after, mapping, packs,
@@ -561,9 +616,13 @@ def main():
     print(f"  {summary['counts']['rows']:,} rows -> {summary['counts']['codes']} cost codes "
           f"({summary['counts']['legacy_codes']} legacy)")
     fixed = [m for m in moves if m.get("source") == "correction"]
+    carved = [m for m in moves if m.get("source") == "split"]
     print(f"  {len(moves)} transactions moved, "
           f"${sum(z(m['ac']) for m in moves):,.2f} of actual cost"
           f"  ({len(fixed)} confirmed corrections, ${sum(z(m['ac']) for m in fixed):,.2f})")
+    if carved:
+        print(f"  {len(carved)} estimate line(s) split onto their own code, "
+              f"${sum(z(m['rb']) for m in carved):,.2f} of budget")
     print(f"  actual  {b['ac']:>14,.2f} -> {a['ac']:>14,.2f}")
     print(f"  to go   {b['ctc']:>14,.2f} -> {a['ctc']:>14,.2f}")
     print(f"  variance{b['rvp']:>14,.2f} -> {a['rvp']:>14,.2f}")

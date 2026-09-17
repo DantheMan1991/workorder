@@ -377,7 +377,8 @@ function paintPosition() {
     : "The job is projected to finish inside its revised budget";
   document.getElementById("pos-sub").textContent =
     `${D.counts.rows.toLocaleString()} rows of export, rolled up into ${P.length} work packages across `
-    + `${TRADES.length} trades. A package is one piece of work with all of its cost — labor, material, `
+    + `${TRADES.length} trades. A package is one piece of work with all of its budget and cost — labor, `
+    + `material, `
     + `mileage, subcontractor, equipment — added together, so cost booked to the wrong line inside a `
     + `package nets out instead of reading as an overrun.`;
 
@@ -451,7 +452,10 @@ function paintTrades() {
 
 /* ---------- packages ---------- */
 document.getElementById("pack-sub").textContent =
-  `${D.counts.codes} cost codes collapse to ${P.length} packages. Bars share one scale across the `
+  `${D.counts.codes} cost codes`
+  + (D.counts.split_lines ? `, plus ${D.counts.split_lines} line`
+      + `${D.counts.split_lines === 1 ? "" : "s"} split onto a code of its own,` : "")
+  + ` collapse to ${P.length} packages. Bars share one scale across the `
   + `whole job, so a short bar is a small package. The tick on each marks that package's revised `
   + `budget, and anything past the tick is spend its own budget cannot cover.`;
 const catSel = document.getElementById("cat");
