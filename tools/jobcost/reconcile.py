@@ -141,8 +141,9 @@ def find_anomalies(cats, moves, after, packs):
         over = -p["var"]
         if over < 1000:
             continue
-        unconfirmed = sum(z(m["ac"]) for m in moves if m["confidence"] == "review"
-                          and any(l["code"] == m["to_code"] for l in p["lines"]))
+        codes = {l["code"] for l in p["lines"]}
+        inbound = [m for m in moves if m["to_code"] in codes and z(m["ac"])]
+        unconfirmed = sum(z(m["ac"]) for m in inbound if m["confidence"] == "review")
         n = len(p["lines"])
         if p["rb"] == 0:
             detail = (f"${p['ac']:,.0f} of cost against a package that was never budgeted. "
@@ -153,11 +154,19 @@ def find_anomalies(cats, moves, after, packs):
         else:
             detail = (f"Budget ${p['rb']:,.0f} across {n} codes, ${p['ac']:,.0f} spent. Even with all "
                       f"{n} netted together the package does not come back inside its budget.")
+        moved_in = sum(z(m["ac"]) for m in inbound)
+        if moved_in > 10000:
+            sources = {}
+            for m in inbound:
+                sources[m["from_code"]] = sources.get(m["from_code"], 0.0) + z(m["ac"])
+            top = sorted(sources.items(), key=lambda kv: -kv[1])[:2]
+            named = " and ".join(f"${v:,.0f} from {k}" for k, v in top)
+            detail += (f" ${moved_in:,.0f} of that cost was moved onto this package during the "
+                       f"reconciliation - {named}. Without it the package would be "
+                       f"${abs(p['rb'] - (p['ac'] - moved_in)):,.0f} "
+                       f"{'over' if p['ac'] - moved_in > p['rb'] else 'under'} budget.")
         if unconfirmed:
-            detail += (f" ${unconfirmed:,.0f} of it is the one reallocation still waiting on your "
-                       f"confirmation - without it this package is "
-                       f"${abs(p['rb'] - (p['ac'] - unconfirmed)):,.0f} "
-                       f"{'over' if p['ac'] - unconfirmed > p['rb'] else 'under'} budget.")
+            detail += (f" ${unconfirmed:,.0f} is still waiting on your confirmation.")
         out.append({"kind": "overrun", "severity": "high" if over > 20000 else "medium",
                     "amount": round(over, 2), "title": f"{p['name']} is over budget",
                     "where": p["category"], "detail": detail})
@@ -389,7 +398,8 @@ def find_miscodes(packs, moves, floor=2000.0):
     The package total absorbs these, so they are not overruns - they are cost sitting on
     the wrong line, and they are what makes a per-code report unreadable.
     """
-    confirmed = {m["to_code"] for m in moves if m.get("source") == "correction"}
+    confirmed = {m["to_code"] for m in moves
+                 if m.get("source") == "correction" or m.get("confidence") == "stated"}
     out = []
     for p in packs:
         if p["var"] < -0.5 or len(p["lines"]) < 2:

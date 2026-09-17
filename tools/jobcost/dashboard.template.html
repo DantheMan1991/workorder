@@ -520,7 +520,9 @@ function paintPackages() {
 /* ---------- miscoded ---------- */
 const openMis = D.miscodes.filter(m => !m.confirmed_here);
 const misTotal = openMis.reduce((s, m) => s + m.over, 0);
-const fixes = D.moves.filter(m => m.source === "correction");
+// budget-only splits carry no cost, so they do not belong in a sentence about spend
+const fixes = D.moves.filter(m =>
+  (m.source === "correction" || m.confidence === "stated") && m.ac > 0);
 const fixTotal = fixes.reduce((s, m) => s + m.ac, 0);
 document.getElementById("mis-sub").innerHTML = D.miscodes.length
   ? `${usd(misTotal)} sits on a code that has no room left for it while another code in the same `
@@ -528,9 +530,9 @@ document.getElementById("mis-sub").innerHTML = D.miscodes.length
     + `None of this changes what the job costs, and none of it shows up as an overrun above, but `
     + `re-coding it is what makes a per-code report readable again.`
     + (fixes.length ? `<br><br>${fixes.length} transaction${fixes.length === 1 ? " has" : "s have"} `
-        + `already been moved by hand — ${usd(fixTotal)} — and those rows are marked below: the code `
-        + `is where you put it, so what is off there is the budget split inside the package, not the `
-        + `coding.` : "")
+        + `already been placed by hand — ${usd(fixTotal)} — on codes you named. Where one of those `
+        + `codes appears below it is marked: the coding is right, and what is off is the budget `
+        + `split inside the package.` : "")
   : "Nothing found.";
 const misBody = document.querySelector("#mis-table tbody");
 D.miscodes.forEach(m => {
