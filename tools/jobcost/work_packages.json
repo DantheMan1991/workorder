@@ -1,0 +1,11 @@
+{
+  "_readme": "How cost codes are grouped into work packages. A package is one piece of work - all its labor, material, mileage, subcontractor and equipment codes together - so a cost booked to the wrong line inside a package nets out instead of reading as an overrun. Edit and re-run reconcile.py.",
+  "cost_types": ["Subcontractors", "Subcontractor", "Materials", "Material", "Labor", "Mileage",
+                 "Trucking", "Equipment Fuel", "Shrock Equipment", "Rental Equipment",
+                 "Equipment Hours", "Equipment", "Fees Rental", "Rental", "Fee", "Hours"],
+  "aliases": {
+    "Public/Private Sewer": "Public Sewer",
+    "Concrete Porch Concrete": "Concrete Porch"
+  },
+  "_aliases_note": "Left-hand name (after the cost type is stripped) is folded into the right-hand package. Add a line here to merge any two packages - e.g. \"Concrete Porch\": \"Porch\" would put the porch concrete sub in with the porch labor."
+}

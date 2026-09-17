@@ -131,9 +131,35 @@ def apply_moves(cats, moves):
     return after
 
 
-def find_anomalies(cats, moves, after):
+def find_anomalies(cats, moves, after, packs):
+    """What is left once packages net internally - the problems that are actually real."""
     by_code = index_codes(cats)
     out = []
+
+    for p in packs:
+        over = -p["var"]
+        if over < 1000:
+            continue
+        unconfirmed = sum(z(m["ac"]) for m in moves if m["confidence"] == "review"
+                          and any(l["code"] == m["to_code"] for l in p["lines"]))
+        n = len(p["lines"])
+        if p["rb"] == 0:
+            detail = (f"${p['ac']:,.0f} of cost against a package that was never budgeted. "
+                      f"Either it belongs to another package or the budget is missing.")
+        elif n == 1:
+            detail = (f"Budget ${p['rb']:,.0f}, ${p['ac']:,.0f} spent. A single code, so there is no "
+                      f"sibling line for it to net against.")
+        else:
+            detail = (f"Budget ${p['rb']:,.0f} across {n} codes, ${p['ac']:,.0f} spent. Even with all "
+                      f"{n} netted together the package does not come back inside its budget.")
+        if unconfirmed:
+            detail += (f" ${unconfirmed:,.0f} of it is the one reallocation still waiting on your "
+                       f"confirmation - without it this package is "
+                       f"${abs(p['rb'] - (p['ac'] - unconfirmed)):,.0f} "
+                       f"{'over' if p['ac'] - unconfirmed > p['rb'] else 'under'} budget.")
+        out.append({"kind": "overrun", "severity": "high" if over > 20000 else "medium",
+                    "amount": round(over, 2), "title": f"{p['name']} is over budget",
+                    "where": p["category"], "detail": detail})
 
     dupes = {}
     for c in by_code.values():
@@ -143,80 +169,31 @@ def find_anomalies(cats, moves, after):
     for number, codes in dupes.items():
         if len(codes) < 2:
             continue
-        shared = set()
-        for a in codes[0]["items"]:
-            for b in codes[1]["items"]:
-                if a["title"] == b["title"] and abs(z(a["ac"]) - z(b["ac"])) < 0.005 and z(a["ac"]):
-                    shared.add((a["title"], z(a["ac"])))
-        out.append({"kind": "duplicate-code", "severity": "high" if shared else "medium",
-                    "amount": round(sum(v for _, v in shared), 2),
+        shared = {(a["title"], z(a["ac"])) for a in codes[0]["items"] for b in codes[1]["items"]
+                  if a["title"] == b["title"] and abs(z(a["ac"]) - z(b["ac"])) < 0.005 and z(a["ac"])}
+        if not shared:
+            continue
+        amount = sum(v for _, v in shared)
+        out.append({"kind": "duplicate-code", "severity": "high", "amount": round(amount, 2),
                     "title": f"Cost code {number} exists twice",
-                    "detail": f"{' and '.join(c['code'] for c in codes)} both carry "
-                              f"{len(shared)} identical transactions totalling "
-                              f"${sum(v for _, v in shared):,.2f}. Category 03 counts that money twice."
-                              if shared else "Two codes share one number."})
+                    "where": codes[0]["category"],
+                    "detail": f"{' and '.join(c['code'] for c in codes)} both carry the same "
+                              f"{len(shared)} transactions. ${amount:,.2f} is counted twice, and it "
+                              f"inflates this package's spend by the same amount."})
 
-    for c in by_code.values():
-        if c["ctc"] is None and (z(c["rb"]) or z(c["ac"])):
-            out.append({"kind": "no-projection", "severity": "high", "amount": round(z(c["rb"]), 2),
-                        "title": f"{c['code']} has no cost-to-complete",
-                        "detail": f"A ${z(c['rb']):,.0f} budget with nothing spent and no projection "
-                                  f"entered, so it reads as ${z(c['rb']):,.0f} under budget. It is not."})
-
-    # A code with a big budget and nothing spent is the natural twin of an unbudgeted overrun.
-    idle = [c for c in by_code.values()
-            if not is_legacy(c["code"]) and z(after[c["code"]]["ac"]) == 0 and z(after[c["code"]]["rb"]) > 0]
-
-    idle.sort(key=lambda c: -z(after[c["code"]]["rb"]))
-
-    def twin(code, over):
-        """The largest untouched budget in the same trade - the likely other half of a mis-split."""
-        stem = re.sub(r"^[\d.]+\s*-\s*", "", code).split()[0].rstrip("s").lower()
-        floor = max(10_000.0, over * 0.25)
-        for c in idle:
-            if stem and stem in c["code"].lower() and z(after[c["code"]]["rb"]) >= floor:
-                return c
-        return None
-
-    for c in by_code.values():
-        if is_legacy(c["code"]):
-            continue
-        a = after[c["code"]]
-        over = -z(a["rvp"])
-        if over <= 20000 or z(a["ac"]) <= z(a["rb"]):
-            continue
-        detail = f"Budget ${z(a['rb']):,.0f}, actual ${z(a['ac']):,.0f}."
-        if "Mileage" in c["code"]:
-            detail += (" A mileage code cannot absorb this - the cost is almost certainly"
-                       " posted to the wrong line.")
-        unconfirmed = sum(z(m["ac"]) for m in moves
-                          if m["to_code"] == c["code"] and m["confidence"] == "review")
-        if unconfirmed:
-            src = next(m["from_code"] for m in moves
-                       if m["to_code"] == c["code"] and m["confidence"] == "review")
-            detail += (f" ${unconfirmed:,.0f} of that actual came across from the retired {src} code and is"
-                       f" the one reallocation still waiting on your confirmation.")
-        t = twin(c["code"], over)
-        if t:
-            detail += (f" Meanwhile {t['code']} holds ${z(after[t['code']]['rb']):,.0f} of budget"
-                       f" with nothing spent, so this looks like a split between the two.")
-        out.append({"kind": "overrun", "severity": "high" if over > 90000 else "medium",
-                    "amount": round(over, 2), "title": f"{c['code']} is ${over:,.0f} over",
-                    "detail": detail})
-
-    # Same document number posted twice inside the legacy codes.
     seen = {}
     for m in moves:
-        if not m["title"] or not str(m["title"]).startswith(("Bill", "Check", "CC")):
+        if not str(m["title"] or "").startswith(("Bill", "Check", "CC")):
             continue
         key = (re.sub(r"[^A-Za-z0-9]", "", str(m["title"])).upper(), round(z(m["ac"]), 2))
         if z(m["ac"]) and key in seen:
-            where = (f"twice under {m['from_code']}" if seen[key] == m["from_code"]
-                     else f"under both {seen[key]} and {m['from_code']}")
-            out.append({"kind": "possible-duplicate", "severity": "medium", "amount": round(z(m["ac"]), 2),
+            where = ("twice on the same code" if seen[key] == m["from_code"]
+                     else f"on both {seen[key]} and {m['from_code']}")
+            out.append({"kind": "possible-duplicate", "severity": "medium",
+                        "amount": round(z(m["ac"]), 2), "where": m["to_category"],
                         "title": f"{m['title']} posted twice",
-                        "detail": f"${z(m['ac']):,.2f} appears {where}. Worth checking it is not "
-                                  f"one payment entered twice."})
+                        "detail": f"${z(m['ac']):,.2f} appears {where}. Worth checking it is not one "
+                                  f"payment entered twice."})
         seen[key] = m["from_code"]
 
     out.sort(key=lambda a: (-{"high": 2, "medium": 1}.get(a["severity"], 0), -a["amount"]))
@@ -268,7 +245,71 @@ def labor_breakdown(cats):
             "total": {k: round(v, 2) for k, v in total.items()}}
 
 
-def summarise(cats, moves, after, mapping, source):
+def build_packages(cats, after, rules):
+    """Group cost codes into work packages and do the budget arithmetic on the group.
+
+    A package is one piece of work with all its cost types together. Netting at this level
+    is the point: cost booked to a package's mileage line instead of its material line is
+    still cost against that package's budget, so it should not read as an overrun.
+    """
+    types = sorted(rules["cost_types"], key=len, reverse=True)
+    aliases = rules["aliases"]
+
+    def split(code):
+        t = re.sub(r"^[\d.]+\s*-\s*", "", code).strip()
+        for suf in types:
+            if t.endswith(" " + suf):
+                return aliases.get(t[: -len(suf) - 1].strip(), t[: -len(suf) - 1].strip()), suf
+        return aliases.get(t, t), "Other"
+
+    packs = {}
+    for cat in cats:
+        for c in cat["codes"]:
+            if is_legacy(c["code"]):
+                continue
+            name, kind = split(c["code"])
+            a = after[c["code"]]
+            p = packs.setdefault(name, {"name": name, "category": cat["name"], "lines": []})
+            p["lines"].append({"code": c["code"], "kind": kind,
+                               **{k: round(z(a[k]), 2) for k in MONEY}})
+
+    for p in packs.values():
+        for k in ("ob", "rb", "ac"):
+            p[k] = round(sum(l[k] for l in p["lines"]), 2)
+        # The whole point: cost-to-complete and variance computed on the package total.
+        p["ctc"] = round(max(p["rb"] - p["ac"], 0.0), 2)
+        p["projected"] = round(p["ac"] + p["ctc"], 2)
+        p["var"] = round(min(p["rb"] - p["ac"], 0.0), 2)
+        p["percode_var"] = round(sum(min(l["rb"] - l["ac"], 0.0) for l in p["lines"]), 2)
+        p["lines"].sort(key=lambda l: -l["ac"])
+    return sorted(packs.values(), key=lambda p: (p["category"], -p["projected"]))
+
+
+def find_miscodes(packs, floor=2000.0):
+    """Lines carrying far more than their own budget while a sibling line sits unspent.
+
+    The package total absorbs these, so they are not overruns - they are cost sitting on
+    the wrong line, and they are what makes a per-code report unreadable.
+    """
+    out = []
+    for p in packs:
+        if p["var"] < -0.5 or len(p["lines"]) < 2:
+            continue                                   # a real overrun belongs in the flags
+        for l in p["lines"]:
+            over = l["ac"] - l["rb"]
+            if over < floor:
+                continue
+            spare = sorted((s for s in p["lines"] if s is not l and s["rb"] - s["ac"] > 0),
+                           key=lambda s: -(s["rb"] - s["ac"]))
+            out.append({"package": p["name"], "category": p["category"], "code": l["code"],
+                        "kind": l["kind"], "rb": l["rb"], "ac": l["ac"], "over": round(over, 2),
+                        "spare_code": spare[0]["code"] if spare else None,
+                        "spare_kind": spare[0]["kind"] if spare else None,
+                        "spare": round(spare[0]["rb"] - spare[0]["ac"], 2) if spare else 0.0})
+    return sorted(out, key=lambda m: -m["over"])
+
+
+def summarise(cats, moves, after, mapping, packs, miscodes, source):
     by_code = index_codes(cats)
 
     def totals(get):
@@ -313,7 +354,17 @@ def summarise(cats, moves, after, mapping, source):
         "codes": codes,
         "moves": moves,
         "mapping": mapping["buckets"],
-        "anomalies": find_anomalies(cats, moves, after),
+        "packages": packs,
+        "miscodes": miscodes,
+        "package_totals": {
+            "rb": round(sum(p["rb"] for p in packs), 2),
+            "ob": round(sum(p["ob"] for p in packs), 2),
+            "ac": round(sum(p["ac"] for p in packs), 2),
+            "ctc": round(sum(p["ctc"] for p in packs), 2),
+            "projected": round(sum(p["projected"] for p in packs), 2),
+            "var": round(sum(p["var"] for p in packs), 2),
+        },
+        "anomalies": find_anomalies(cats, moves, after, packs),
         "labor": labor_breakdown(cats),
         "counts": {"rows": sum(1 + len(c["items"]) for c in by_code.values()) + len(cats),
                    "codes": len(by_code), "legacy_codes": sum(1 for c in by_code if is_legacy(c)),
@@ -348,7 +399,36 @@ def write_xlsx(summary, path):
         ws.freeze_panes = "A2"
 
     ws = wb.active
-    ws.title = "Reallocated Summary"
+    ws.title = "Work Packages"
+    prows = []
+    for cat in sorted({p["category"] for p in summary["packages"]}):
+        members = [p for p in summary["packages"] if p["category"] == cat]
+        prows.append(["TRADE", cat, "",
+                      sum(p["ob"] for p in members), sum(p["rb"] for p in members),
+                      sum(p["ac"] for p in members), sum(p["ctc"] for p in members),
+                      sum(p["projected"] for p in members), sum(p["var"] for p in members)])
+        for p in sorted(members, key=lambda p: -p["projected"]):
+            prows.append(["", "", p["name"], p["ob"], p["rb"], p["ac"], p["ctc"],
+                          p["projected"], p["var"]])
+    pt = summary["package_totals"]
+    prows.append(["TOTAL", "", "", pt["ob"], pt["rb"], pt["ac"], pt["ctc"],
+                  pt["projected"], pt["var"]])
+    sheet(ws, ["Type", "Trade", "Work package", "Original Budget", "Revised Budget", "Actual",
+               "Left To Spend", "Projected", "Over / Under"], prows,
+          [10, 26, 42, 16, 16, 16, 16, 16, 16])
+    for row in ws.iter_rows(min_row=2):
+        if row[0].value in ("TRADE", "TOTAL"):
+            for cell in row:
+                cell.font = Font(bold=True)
+
+    sheet(wb.create_sheet("Wrong Line"),
+          ["Cost code carrying it", "Work package", "Trade", "Its budget", "Its actual", "Excess",
+           "Room sits on this code instead", "Unspent there"],
+          [[m["code"], m["package"], m["category"], m["rb"], m["ac"], m["over"],
+            m["spare_code"] or "", m["spare"]] for m in summary["miscodes"]],
+          [46, 34, 24, 15, 15, 15, 46, 15])
+
+    ws = wb.create_sheet("Cost Code Detail")
     rows = []
     for cat in summary["categories"]:
         if cat["legacy"] and not any(z(cat["after"][k]) for k in MONEY):
@@ -390,9 +470,10 @@ def write_xlsx(summary, path):
           [48, 34, 20, 20, 16, 16, 20, 20])
 
     sheet(wb.create_sheet("Flags"),
-          ["Severity", "Issue", "Amount", "Detail"],
-          [[a["severity"].upper(), a["title"], a["amount"], a["detail"]] for a in summary["anomalies"]],
-          [12, 52, 16, 110])
+          ["Severity", "Issue", "Trade", "Amount", "Detail"],
+          [[a["severity"].upper(), a["title"], a.get("where", ""), a["amount"], a["detail"]]
+           for a in summary["anomalies"]],
+          [12, 46, 24, 16, 110])
 
     wb.save(path)
 
@@ -408,15 +489,22 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     mapping = json.loads(Path(args.map).read_text())
 
+    packrules = json.loads((HERE / "work_packages.json").read_text())
     cats = load(args.export)
     moves = reallocate(cats, mapping)
     after = apply_moves(cats, moves)
-    summary = summarise(cats, moves, after, mapping, args.export)
+    packs = build_packages(cats, after, packrules)
+    summary = summarise(cats, moves, after, mapping, packs, find_miscodes(packs), args.export)
 
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
     xlsx = out / "Philips_JobCost_Reallocated.xlsx"
     write_xlsx(summary, xlsx)
 
+    pt = summary["package_totals"]
+    print(f"  {len(packs)} work packages; netting inside each one:")
+    print(f"    projected {pt['projected']:>14,.2f} vs budget {pt['rb']:>14,.2f}"
+          f"  ->  {pt['var']:>13,.2f}")
+    print(f"    {len(summary['miscodes'])} lines carrying cost that belongs on a sibling line")
     b, a = summary["totals"]["before"], summary["totals"]["after"]
     print(f"  {summary['counts']['rows']:,} rows -> {summary['counts']['codes']} cost codes "
           f"({summary['counts']['legacy_codes']} legacy)")
