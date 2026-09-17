@@ -12,3 +12,8 @@ coverage/
 
 # TS build info
 *.tsbuildinfo
+
+# generated job cost reports
+tools/jobcost/out/
+__pycache__/
+*.pyc

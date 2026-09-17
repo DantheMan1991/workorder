@@ -1,0 +1,652 @@
+<title>Philips Job Cost</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --plane:#e9ecf1; --paper:#ffffff; --sunk:#f4f6f9;
+  --ink:#14161a; --ink-2:#4c5462; --ink-3:#79818f;
+  --rule:#d6dae2; --rule-soft:#e7eaf0;
+  --accent:#1c5cab; --accent-mark:#2a78d6; --accent-soft:#86b6ef;
+  --good:#0ca30c; --good-ink:#0a6b12; --warn:#fab219; --warn-ink:#8a5a00;
+  --bad:#d03b3b; --bad-ink:#a32222;
+  --wash-accent:rgba(42,120,214,.16); --wash-bad:rgba(208,59,59,.18);
+  --ring:rgba(20,22,26,.09); --shadow:0 1px 2px rgba(20,22,26,.05),0 6px 16px -10px rgba(20,22,26,.18);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --plane:#0b0d10; --paper:#16181c; --sunk:#1d2026;
+  --ink:#eef1f5; --ink-2:#aab2be; --ink-3:#7b8492;
+  --rule:#2a2f38; --rule-soft:#222730;
+  --accent:#78aef0; --accent-mark:#3987e5; --accent-soft:#184f95;
+  --good:#0ca30c; --good-ink:#4cc44c; --warn:#fab219; --warn-ink:#e2a11a;
+  --bad:#d03b3b; --bad-ink:#f07878;
+  --wash-accent:rgba(57,135,229,.22); --wash-bad:rgba(208,59,59,.24);
+  --ring:rgba(255,255,255,.10); --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 20px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --plane:#0b0d10; --paper:#16181c; --sunk:#1d2026;
+  --ink:#eef1f5; --ink-2:#aab2be; --ink-3:#7b8492;
+  --rule:#2a2f38; --rule-soft:#222730;
+  --accent:#78aef0; --accent-mark:#3987e5; --accent-soft:#184f95;
+  --good:#0ca30c; --good-ink:#4cc44c; --warn:#fab219; --warn-ink:#e2a11a;
+  --bad:#d03b3b; --bad-ink:#f07878;
+  --wash-accent:rgba(57,135,229,.22); --wash-bad:rgba(208,59,59,.24);
+  --ring:rgba(255,255,255,.10); --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 20px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--plane);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;
+     -webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.015em}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+:focus-visible{outline:2px solid var(--accent-mark);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- masthead ---------- */
+.masthead{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--paper);
+  border-bottom:1px solid var(--rule)}
+.masthead .inner{max-width:1280px;margin:0 auto;padding:10px 16px;display:flex;gap:16px 28px;
+  align-items:baseline;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand b{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.02em}
+.brand span{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.mini{display:flex;gap:6px;align-items:baseline;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.mini b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;color:var(--ink);font-size:13px}
+@media(max-width:700px){.masthead{position:static}.mini{font-size:11px}}
+
+/* ---------- layout ---------- */
+main{max-width:1280px;margin:0 auto;padding:0 16px 72px}
+section{padding-block:34px}
+section + section{border-top:1px solid var(--rule-soft)}
+.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:600;margin:0 0 6px}
+.sec-h{font-size:23px;font-weight:600}
+.sec-sub{color:var(--ink-2);max-width:64ch;margin:7px 0 0}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:10px}
+.grid{display:grid;gap:14px}
+
+/* ---------- position ---------- */
+.position{display:grid;grid-template-columns:minmax(300px,1.05fr) 1fr;gap:18px;margin-top:20px}
+@media(max-width:860px){.position{grid-template-columns:1fr}}
+.hero{padding:24px;display:flex;flex-direction:column;justify-content:center;gap:2px;
+  border-left:4px solid var(--bad)}
+.hero .cap{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.hero .fig{font-family:var(--display);font-weight:700;font-size:clamp(40px,8vw,60px);line-height:1.02;
+  letter-spacing:-.035em;color:var(--bad-ink);margin-top:6px}
+.hero .say{color:var(--ink-2);margin-top:10px;max-width:42ch}
+.hero .was{margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft);font-size:13px;color:var(--ink-2)}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:420px){.tiles{grid-template-columns:1fr}}
+.tile{padding:16px 16px 14px;display:flex;flex-direction:column;gap:3px}
+.tile .cap{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.tile .v{font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-.025em;margin-top:4px}
+.tile .n{font-size:12px;color:var(--ink-2)}
+.meter{height:5px;border-radius:3px;background:var(--rule-soft);overflow:hidden;margin-top:9px}
+.meter i{display:block;height:100%;background:var(--accent-mark);border-radius:3px}
+
+/* ---------- generic bar rows ---------- */
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:minmax(150px,265px) 1fr minmax(96px,auto);gap:8px 14px;
+  align-items:center;padding:9px 0;border-top:1px solid var(--rule-soft)}
+.row:first-child{border-top:0}
+.row .nm{font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.row .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:11.5px}
+.row .amt{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+@media(max-width:620px){
+  .row{grid-template-columns:1fr auto;}
+  .row .track,.row .bullet{grid-column:1/-1}
+}
+.track{height:16px;background:var(--rule-soft);border-radius:3px;display:flex;overflow:hidden}
+.track i{display:block;height:100%}
+.track i + i{margin-left:2px}
+.seg-ok{background:var(--accent-mark);border-radius:0 3px 3px 0}
+.seg-rev{background:var(--warn);border-radius:0 3px 3px 0}
+
+/* bullet (budget vs spent) */
+.bullet{position:relative;height:22px}
+.bullet .bar{position:absolute;inset:0;display:flex;background:var(--rule-soft);border-radius:3px;overflow:hidden}
+.bullet .bar i{height:100%}
+.bullet .bar i + i{margin-left:2px}
+.b-spent{background:var(--accent-mark)}
+.b-togo{background:var(--wash-accent)}
+.b-over{background:var(--bad)}
+.b-overtogo{background:var(--wash-bad)}
+.bullet .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.bullet .tick::after{content:"";position:absolute;inset:-6px -7px;}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 14px;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:2px;flex:none}
+.sw.line{width:2px;height:13px;border-radius:1px}
+
+/* ---------- chips ---------- */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  padding:2px 8px;border-radius:999px;border:1px solid var(--ring);white-space:nowrap;
+  letter-spacing:.02em}
+.chip.high{color:var(--good-ink);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.chip.medium{color:var(--ink-2);background:var(--sunk)}
+.chip.review{color:var(--warn-ink);background:color-mix(in srgb,var(--warn) 20%,transparent)}
+.chip.over{color:var(--bad-ink);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:720px}
+th{text-align:left;font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-3);padding:9px 12px;border-bottom:1px solid var(--rule);
+  background:var(--paper);position:sticky;top:0;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tbody tr:hover{background:var(--sunk)}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+th.n{font-family:var(--display)}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--ink)}
+th[aria-sort]:not([aria-sort="none"]){color:var(--accent)}
+.code{font-family:var(--mono);font-size:12.5px}
+.cat-tag{font-size:11px;color:var(--ink-3)}
+.pos{color:var(--good-ink)}.neg{color:var(--bad-ink)}
+tr.moved td:first-child{box-shadow:inset 3px 0 0 var(--accent-mark)}
+
+/* ---------- controls ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 12px}
+input[type=search],select{font:inherit;font-size:13px;color:var(--ink);background:var(--paper);
+  border:1px solid var(--rule);border-radius:7px;padding:7px 10px}
+input[type=search]{min-width:min(260px,100%);flex:1 1 200px}
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);
+  background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:7px 11px;cursor:pointer}
+.toggle input{accent-color:var(--accent-mark);margin:0}
+.count{font-size:12px;color:var(--ink-3);margin-left:auto}
+
+/* ---------- flags ---------- */
+.flags{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;margin-top:20px}
+.flag{padding:15px 16px;border-left:3px solid var(--rule)}
+.flag.high{border-left-color:var(--bad)}
+.flag.medium{border-left-color:var(--warn)}
+.flag h3{font-size:14.5px;font-weight:600;letter-spacing:-.005em}
+.flag .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:500;
+  margin:7px 0 6px;letter-spacing:-.02em}
+.flag p{margin:0;font-size:13px;color:var(--ink-2)}
+.flag .tagline{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+
+/* ---------- chart ---------- */
+.chartwrap{padding:18px 16px 10px;position:relative}
+.chartwrap svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--rule);
+  border-radius:7px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;
+  transform:translate(-50%,-100%);z-index:5}
+.tip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+
+.crew{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1.25fr);gap:16px;margin-top:20px}
+@media(max-width:840px){.crew{grid-template-columns:1fr}}
+.note{font-size:12px;color:var(--ink-3);margin:10px 0 0}
+.pad{padding:16px}
+footer{max-width:1280px;margin:0 auto;padding:22px 16px 40px;border-top:1px solid var(--rule-soft);
+  font-size:12px;color:var(--ink-3)}
+footer code{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);overflow-wrap:anywhere}
+</style>
+
+<header class="masthead">
+  <div class="inner">
+    <div class="brand"><b>Philips</b><span id="asof">Job cost</span></div>
+    <div class="mini">Revised budget <b id="m-rb"></b></div>
+    <div class="mini">Spent <b id="m-ac"></b></div>
+    <div class="mini">Left to spend <b id="m-ctc"></b></div>
+    <div class="mini">Projected <b id="m-proj"></b></div>
+  </div>
+</header>
+
+<main>
+  <section id="position">
+    <p class="eyebrow">Where the job stands</p>
+    <h1 class="sec-h">The job is projected to finish over its revised budget</h1>
+    <p class="sec-sub" id="pos-sub"></p>
+    <div class="position">
+      <div class="card hero">
+        <span class="cap">Projected over revised budget</span>
+        <div class="fig num" id="hero-fig"></div>
+        <p class="say" id="hero-say"></p>
+        <div class="was" id="hero-was"></div>
+      </div>
+      <div class="tiles">
+        <div class="card tile"><span class="cap">Revised budget</span><span class="v num" id="t-rb"></span>
+          <span class="n" id="t-rb-n"></span></div>
+        <div class="card tile"><span class="cap">Spent to date</span><span class="v num" id="t-ac"></span>
+          <span class="n" id="t-ac-n"></span><span class="meter"><i id="t-ac-bar"></i></span></div>
+        <div class="card tile"><span class="cap">Left to spend</span><span class="v num" id="t-ctc"></span>
+          <span class="n" id="t-ctc-n"></span></div>
+        <div class="card tile"><span class="cap">Projected final cost</span><span class="v num" id="t-proj"></span>
+          <span class="n" id="t-proj-n"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cleanup">
+    <p class="eyebrow">Cost code cleanup</p>
+    <h2 class="sec-h">Retired letter codes folded into the numbered system</h2>
+    <p class="sec-sub" id="clean-sub"></p>
+    <div class="card chartwrap" style="margin-top:20px">
+      <div class="legend">
+        <span><i class="sw" style="background:var(--accent-mark)"></i>Confirmed by a matching bill, check or name</span>
+        <span><i class="sw" style="background:var(--warn)"></i>Needs your confirmation</span>
+      </div>
+      <div class="rows" id="move-rows"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="scroll"><table id="map-table">
+        <thead><tr><th>Retired code</th><th>Now posts to</th><th class="n">Actual</th><th class="n">Budget</th>
+          <th>Confidence</th><th>Why</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+    <p class="note" id="clean-note"></p>
+  </section>
+
+  <section id="trades">
+    <p class="eyebrow">By trade</p>
+    <h2 class="sec-h">Budget, spent and still to go</h2>
+    <p class="sec-sub">After the cleanup. The tick marks the revised budget — anything past it is a projected
+      overrun.</p>
+    <div class="card pad" style="margin-top:20px">
+      <div class="legend">
+        <span><i class="sw" style="background:var(--accent-mark)"></i>Spent</span>
+        <span><i class="sw" style="background:var(--wash-accent)"></i>Left to spend</span>
+        <span><i class="sw" style="background:var(--bad)"></i>Already spent past budget</span>
+        <span><i class="sw" style="background:var(--wash-bad)"></i>Still to spend past budget</span>
+        <span><i class="sw line" style="background:var(--ink)"></i>Revised budget</span>
+      </div>
+      <div class="rows" id="trade-rows"></div>
+    </div>
+  </section>
+
+  <section id="flags">
+    <p class="eyebrow">Needs a decision</p>
+    <h2 class="sec-h">What the numbers are hiding</h2>
+    <p class="sec-sub">Found by comparing each code against its budget, its sibling codes and the rest of the
+      export. Ordered by how much money is at stake.</p>
+    <div class="flags" id="flag-cards"></div>
+  </section>
+
+  <section id="ledger">
+    <p class="eyebrow">Full detail</p>
+    <h2 class="sec-h">Every cost code</h2>
+    <p class="sec-sub">All 124 codes with the reallocation applied. Search a code, filter to a trade, or show
+      only the codes that are over.</p>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search a cost code or trade…" aria-label="Search cost codes">
+      <select id="cat" aria-label="Filter by trade"><option value="">All trades</option></select>
+      <label class="toggle" for="onlyover"><input type="checkbox" id="onlyover">Only over budget</label>
+      <label class="toggle" for="onlymoved"><input type="checkbox" id="onlymoved">Only codes that changed</label>
+      <span class="count" id="ledger-count"></span>
+    </div>
+    <div class="card"><div class="scroll"><table id="ledger-table">
+      <thead><tr>
+        <th class="sortable" data-k="code">Cost code</th>
+        <th class="n sortable" data-k="ob">Original budget</th>
+        <th class="n sortable" data-k="rb">Revised budget</th>
+        <th class="n sortable" data-k="ac">Actual</th>
+        <th class="n sortable" data-k="moved">Moved in</th>
+        <th class="n sortable" data-k="ctc">Left to spend</th>
+        <th class="n sortable" data-k="rvp">Over / under</th>
+      </tr></thead><tbody></tbody></table></div></div>
+  </section>
+
+  <section id="crew">
+    <p class="eyebrow">Crew</p>
+    <h2 class="sec-h">Hours on the clock</h2>
+    <p class="sec-sub" id="crew-sub"></p>
+    <div class="crew">
+      <div class="card pad">
+        <div class="rows" id="crew-rows"></div>
+        <p class="note" id="crew-note"></p>
+      </div>
+      <div class="card chartwrap">
+        <div class="legend"><span><i class="sw" style="background:var(--accent-mark)"></i>Labor cost booked
+          per month</span></div>
+        <div id="labor-chart"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+const D = /*__DATA__*/;
+
+/* ---------- formatting ---------- */
+const usd = (v, cents) => (v < 0 ? "-" : "") + "$" + Math.abs(v).toLocaleString("en-US",
+  {minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0});
+const pct = v => (v * 100).toFixed(1) + "%";
+const el = (t, cls, txt) => { const n = document.createElement(t); if (cls) n.className = cls;
+  if (txt != null) n.textContent = txt; return n; };
+const MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const monthLabel = k => { const [y, m] = k.split("-"); return MONTH[+m - 1] + " " + y.slice(2); };
+
+const A = D.totals.after, B = D.totals.before;
+const projected = A.ac + A.ctc, overrun = projected - A.rb;
+const spentShare = A.ac / projected;
+
+/* ---------- masthead + position ---------- */
+document.getElementById("asof").textContent = "as of 17 Sep 2026";
+document.getElementById("m-rb").textContent = usd(A.rb);
+document.getElementById("m-ac").textContent = usd(A.ac);
+document.getElementById("m-ctc").textContent = usd(A.ctc);
+document.getElementById("m-proj").textContent = usd(projected);
+
+document.getElementById("pos-sub").textContent =
+  `${D.counts.rows.toLocaleString()} rows of export, rolled up into ${D.counts.codes} cost codes across `
+  + `${D.categories.filter(c => c.after.rb || c.after.ac).length} trades. Every figure below has the retired `
+  + `letter codes folded back in.`;
+document.getElementById("hero-fig").textContent = usd(Math.abs(overrun));
+document.getElementById("hero-say").textContent =
+  `Projected final cost is ${usd(projected)} against a revised budget of ${usd(A.rb)} — `
+  + `${pct(Math.abs(overrun) / A.rb)} over. The job has spent ${pct(spentShare)} of what it is expected to cost.`;
+document.getElementById("hero-was").innerHTML =
+  `The raw export shows <span class="num">${usd(Math.abs(B.rvp))}</span> over. Folding the retired codes onto `
+  + `budgeted lines absorbs <span class="num">${usd(Math.abs(B.rvp) - Math.abs(A.rvp))}</span> of that into `
+  + `budget that was already set aside.`;
+
+document.getElementById("t-rb").textContent = usd(A.rb);
+document.getElementById("t-rb-n").textContent = `originally ${usd(A.ob)} · ${usd(A.rb - A.ob)} of change orders`;
+document.getElementById("t-ac").textContent = usd(A.ac);
+document.getElementById("t-ac-n").textContent = `${pct(spentShare)} of projected final cost`;
+document.getElementById("t-ac-bar").style.width = pct(spentShare);
+document.getElementById("t-ctc").textContent = usd(A.ctc);
+document.getElementById("t-ctc-n").textContent = "remaining budget on codes not yet fully spent";
+document.getElementById("t-proj").textContent = usd(projected);
+document.getElementById("t-proj-n").innerHTML =
+  `<span class="neg">${usd(overrun)} over revised budget</span>`;
+
+/* ---------- cleanup ---------- */
+const movedAc = D.moves.reduce((s, m) => s + m.ac, 0);
+const movedRb = D.moves.reduce((s, m) => s + m.rb, 0);
+const legacyCats = [...new Set(D.moves.map(m => m.from_category))];
+const reviewAc = D.moves.filter(m => m.confidence === "review").reduce((s, m) => s + m.ac, 0);
+
+document.getElementById("clean-sub").innerHTML =
+  `Six retired categories (${legacyCats.map(c => c.split(/[-–]/)[0].trim()).join(", ")}) were still collecting `
+  + `cost. <b>${D.moves.length} transactions — ${usd(movedAc)} of spend and ${usd(movedRb)} of budget</b> — now `
+  + `sit on the numbered code that replaced them. Nothing was added or dropped: the job's total actual cost is `
+  + `${usd(A.ac)} before and after.`;
+
+const receiving = D.codes.filter(c => Math.abs(c.after.ac - c.before.ac) > 0.005 && !c.legacy)
+  .map(c => {
+    const rows = D.moves.filter(m => m.to_code === c.code);
+    return { code: c.code, cat: c.category, total: rows.reduce((s, m) => s + m.ac, 0),
+             review: rows.filter(m => m.confidence === "review").reduce((s, m) => s + m.ac, 0),
+             count: rows.length, rb: c.after.rb, ac: c.after.ac };
+  }).sort((a, b) => b.total - a.total);
+
+const moveMax = Math.max(...receiving.map(r => r.total));
+const moveRows = document.getElementById("move-rows");
+receiving.forEach(r => {
+  const row = el("div", "row");
+  const nm = el("div", "nm", r.code);
+  nm.appendChild(el("small", null, `${r.count} transaction${r.count === 1 ? "" : "s"} · ${r.cat}`));
+  const track = el("div", "track");
+  const ok = (r.total - r.review) / moveMax * 100, rev = r.review / moveMax * 100;
+  if (ok > 0) { const i = el("i", "seg-ok"); i.style.width = ok + "%"; track.appendChild(i); }
+  if (rev > 0) { const i = el("i", "seg-rev"); i.style.width = rev + "%"; track.appendChild(i); }
+  track.title = `${r.code}: ${usd(r.total, true)} moved in`
+    + (r.review ? ` — ${usd(r.review, true)} of it needs confirmation` : "");
+  const amt = el("div", "amt", usd(r.total));
+  row.append(nm, track, amt);
+  moveRows.appendChild(row);
+});
+
+const mapBody = document.querySelector("#map-table tbody");
+const bucketTotals = {};
+D.moves.forEach(m => {
+  const k = m.from_code + "→" + m.to_code;
+  const b = bucketTotals[k] ||= { ...m, ac: 0, rb: 0, n: 0 };
+  b.ac += m.ac; b.rb += m.rb; b.n++;
+  if (m.confidence === "review") { b.confidence = "review"; b.basis = m.basis; }
+});
+Object.values(bucketTotals).sort((a, b) => (b.ac + b.rb) - (a.ac + a.rb)).forEach(m => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><span class="code">${m.from_code}</span><br><span class="cat-tag">${m.from_category}</span></td>
+    <td><span class="code">${m.to_code}</span><br><span class="cat-tag">${m.to_category}</span></td>
+    <td class="n">${m.ac ? usd(m.ac, true) : "—"}</td>
+    <td class="n">${m.rb ? usd(m.rb, true) : "—"}</td>
+    <td><span class="chip ${m.confidence}">${m.confidence === "review" ? "Confirm this"
+      : m.confidence === "high" ? "Confirmed" : "Reasoned"}</span></td>
+    <td style="max-width:40ch;color:var(--ink-2);font-size:12.5px">${m.basis}</td>`;
+  mapBody.appendChild(tr);
+});
+document.getElementById("clean-note").textContent =
+  `One item carries ${usd(reviewAc)} — bill 16562 under G- Material — with nothing anywhere in the export to `
+  + `confirm where it belongs. It is parked on 03.40 - Excavation Material. Change the "to" value in `
+  + `cost_code_map.json and re-run to move it.`;
+
+/* ---------- trades ---------- */
+const trades = D.categories.filter(c => !c.legacy && (c.after.rb || c.after.ac))
+  .sort((a, b) => (b.after.ac + b.after.ctc) - (a.after.ac + a.after.ctc));
+const tradeMax = Math.max(...trades.map(t => Math.max(t.after.rb, t.after.ac + t.after.ctc)));
+const tradeRows = document.getElementById("trade-rows");
+trades.forEach(t => {
+  const rb = t.after.rb, ac = t.after.ac, ctc = t.after.ctc, total = ac + ctc;
+  const W = v => Math.max(0, v) / tradeMax * 100;
+  const row = el("div", "row");
+  const nm = el("div", "nm", t.name);
+  nm.appendChild(el("small", null,
+    `${t.codes} codes · ${rb ? pct(ac / rb) + " of budget spent" : "no budget set"}`));
+  const bullet = el("div", "bullet");
+  const bar = el("div", "bar");
+  const spent = Math.min(ac, rb), spentOver = Math.max(ac - rb, 0);
+  const togo = Math.max(Math.min(total, rb) - ac, 0), togoOver = Math.max(total - Math.max(rb, ac), 0);
+  [["b-spent", spent], ["b-togo", togo], ["b-over", spentOver], ["b-overtogo", togoOver]]
+    .forEach(([cls, v]) => { if (v > 0) { const i = el("i", cls); i.style.width = W(v) + "%"; bar.appendChild(i); } });
+  bullet.appendChild(bar);
+  if (rb > 0) { const tick = el("div", "tick"); tick.style.left = `calc(${W(rb)}% - 1px)`;
+    tick.title = `Revised budget ${usd(rb)}`; bullet.appendChild(tick); }
+  bullet.title = `${t.name}\nBudget ${usd(rb)} · Spent ${usd(ac)} · Left ${usd(ctc)}`
+    + (total > rb ? `\nProjected ${usd(total - rb)} over` : "");
+  const amt = el("div", "amt");
+  amt.innerHTML = `${usd(total)}<br><span style="font-size:11.5px" class="${t.after.rvp < -0.5 ? "neg" : "pos"}">`
+    + `${t.after.rvp < -0.5 ? usd(-t.after.rvp) + " over" : rb ? "on budget" : "unbudgeted"}</span>`;
+  row.append(nm, bullet, amt);
+  tradeRows.appendChild(row);
+});
+
+/* ---------- flags ---------- */
+const flagBox = document.getElementById("flag-cards");
+D.anomalies.forEach(a => {
+  const c = el("div", "card flag " + a.severity);
+  const tag = el("div", "tagline");
+  tag.appendChild(el("span", "chip " + (a.severity === "high" ? "over" : "review"),
+    a.severity === "high" ? "Look at this" : "Worth a check"));
+  c.appendChild(tag);
+  c.appendChild(el("h3", null, a.title));
+  c.appendChild(el("div", "amt", usd(a.amount)));
+  c.appendChild(el("p", null, a.detail));
+  flagBox.appendChild(c);
+});
+
+/* ---------- ledger ---------- */
+const ledger = D.codes.filter(c => !c.legacy || c.before.ac || c.before.rb).map(c => ({
+  code: c.code, cat: c.category, legacy: c.legacy,
+  ob: c.after.ob, rb: c.after.rb, ac: c.after.ac, ctc: c.after.ctc, rvp: c.after.rvp,
+  moved: +(c.after.ac - c.before.ac).toFixed(2),
+}));
+const catSel = document.getElementById("cat");
+[...new Set(ledger.map(c => c.cat))].sort().forEach(c => {
+  const o = document.createElement("option"); o.value = o.textContent = c; catSel.appendChild(o);
+});
+let sortKey = "rvp", sortDir = 1;
+function renderLedger() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const cat = catSel.value, over = document.getElementById("onlyover").checked;
+  const moved = document.getElementById("onlymoved").checked;
+  let rows = ledger.filter(c =>
+    (!q || (c.code + " " + c.cat).toLowerCase().includes(q)) &&
+    (!cat || c.cat === cat) && (!over || c.rvp < -0.5) && (!moved || Math.abs(c.moved) > 0.005));
+  rows.sort((a, b) => {
+    const x = a[sortKey], y = b[sortKey];
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * sortDir;
+  });
+  const body = document.querySelector("#ledger-table tbody");
+  body.textContent = "";
+  rows.forEach(c => {
+    const tr = document.createElement("tr");
+    if (Math.abs(c.moved) > 0.005) tr.className = "moved";
+    tr.innerHTML = `<td><span class="code">${c.code}</span><br><span class="cat-tag">${c.cat}</span></td>
+      <td class="n">${c.ob ? usd(c.ob, true) : "—"}</td>
+      <td class="n">${c.rb ? usd(c.rb, true) : "—"}</td>
+      <td class="n">${c.ac ? usd(c.ac, true) : "—"}</td>
+      <td class="n">${Math.abs(c.moved) > 0.005
+        ? `<span class="${c.moved > 0 ? "" : "cat-tag"}">${usd(c.moved, true)}</span>` : "—"}</td>
+      <td class="n">${c.ctc ? usd(c.ctc, true) : "—"}</td>
+      <td class="n ${c.rvp < -0.5 ? "neg" : c.rvp > 0.5 ? "pos" : ""}">${
+        Math.abs(c.rvp) < 0.005 ? "—" : usd(c.rvp, true)}</td>`;
+    body.appendChild(tr);
+  });
+  const totOver = rows.reduce((s, c) => s + Math.min(c.rvp, 0), 0);
+  document.getElementById("ledger-count").textContent =
+    `${rows.length} of ${ledger.length} codes · ${usd(totOver)} over across them`;
+}
+["q", "cat", "onlyover", "onlymoved"].forEach(id =>
+  document.getElementById(id).addEventListener("input", renderLedger));
+document.querySelectorAll("#ledger-table th.sortable").forEach(th => {
+  th.tabIndex = 0;
+  const go = () => {
+    const k = th.dataset.k;
+    sortDir = sortKey === k ? -sortDir : (k === "code" ? 1 : -1);
+    sortKey = k;
+    document.querySelectorAll("#ledger-table th").forEach(o => o.setAttribute("aria-sort", "none"));
+    th.setAttribute("aria-sort", sortDir === 1 ? "ascending" : "descending");
+    renderLedger();
+  };
+  th.addEventListener("click", go);
+  th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+});
+renderLedger();
+
+/* ---------- crew ---------- */
+const L = D.labor;
+document.getElementById("crew-sub").textContent =
+  `${L.total.entries.toLocaleString()} time-clock entries, `
+  + `${Math.round(L.total.hours).toLocaleString()} hours, `
+  + `${usd(L.total.cost)} of labor — the only part of the export that carries dates.`;
+const crewMax = Math.max(...L.people.map(p => p.cost));
+const crewRows = document.getElementById("crew-rows");
+L.people.forEach(p => {
+  const row = el("div", "row");
+  const nm = el("div", "nm", p.name);
+  nm.appendChild(el("small", null,
+    `${p.paid_hours.toLocaleString(undefined, {maximumFractionDigits: 0})} h at `
+    + `${usd(p.rate, true)}/h · ${p.codes[0][0]}`));
+  const track = el("div", "track");
+  const i = el("i", "seg-ok"); i.style.width = (p.cost / crewMax * 100) + "%"; track.appendChild(i);
+  track.title = `${p.name}: ${usd(p.cost, true)} across ${p.codes.length} cost code(s)`;
+  row.append(nm, track, el("div", "amt", usd(p.cost)));
+  crewRows.appendChild(row);
+});
+document.getElementById("crew-note").textContent =
+  `${L.total.pending} entries totalling ${L.total.unpaid_hours} hours are still pending approval and carry no `
+  + `cost yet. Rates shown are cost divided by approved hours.`;
+
+/* ---------- labor chart ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const mk = (t, a) => { const n = document.createElementNS(NS, t);
+  for (const k in a) n.setAttribute(k, a[k]); return n; };
+const host = document.getElementById("labor-chart");
+const tip = el("div", "tip"); tip.hidden = true;
+host.parentElement.appendChild(tip);
+
+function drawLabor() {
+  const months = L.months;
+  const W = Math.max(280, host.clientWidth || 520), H = 236;
+  const m = { t: 14, r: 16, b: 30, l: 54 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const top = Math.ceil(Math.max(...months.map(d => d.cost)) / 5000) * 5000;
+  const x = i => m.l + (months.length === 1 ? iw / 2 : i / (months.length - 1) * iw);
+  const y = v => m.t + ih - (v / top) * ih;
+
+  host.textContent = "";
+  const svg = mk("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img",
+    "aria-label": `Labor cost booked per month, ${monthLabel(months[0].month)} to `
+      + `${monthLabel(months.at(-1).month)}` });
+
+  for (let v = 0; v <= top; v += top / 4) {
+    svg.appendChild(mk("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v),
+      stroke: "var(--rule-soft)", "stroke-width": 1 }));
+    const t = mk("text", { x: m.l - 9, y: y(v) + 4, "text-anchor": "end", fill: "var(--ink-3)",
+      "font-size": 11, "font-family": "var(--sans)" });
+    t.textContent = v === 0 ? "0" : "$" + (v / 1000) + "k";
+    svg.appendChild(t);
+  }
+
+  const pts = months.map((d, i) => [x(i), y(d.cost)]);
+  svg.appendChild(mk("path", { d: `M${m.l},${y(0)} ` + pts.map(p => `L${p[0]},${p[1]}`).join(" ")
+    + ` L${x(months.length - 1)},${y(0)} Z`, fill: "var(--wash-accent)", stroke: "none" }));
+  svg.appendChild(mk("path", { d: "M" + pts.map(p => `${p[0]},${p[1]}`).join(" L"), fill: "none",
+    stroke: "var(--accent-mark)", "stroke-width": 2, "stroke-linejoin": "round",
+    "stroke-linecap": "round" }));
+
+  months.forEach((d, i) => {
+    if (i % 3 === 0 || i === months.length - 1) {
+      const t = mk("text", { x: x(i), y: H - 10, "text-anchor": i === months.length - 1 ? "end"
+        : i === 0 ? "start" : "middle", fill: "var(--ink-3)", "font-size": 11,
+        "font-family": "var(--sans)" });
+      t.textContent = monthLabel(d.month);
+      svg.appendChild(t);
+    }
+  });
+
+  const last = months.at(-1), li = months.length - 1;
+  svg.appendChild(mk("circle", { cx: x(li), cy: y(last.cost), r: 4.5, fill: "var(--accent-mark)",
+    stroke: "var(--paper)", "stroke-width": 2 }));
+  const lbl = mk("text", { x: x(li) - 13, y: y(last.cost) - 14, "text-anchor": "end",
+    fill: "var(--ink-2)", "font-size": 11, "font-family": "var(--sans)", "font-weight": 500 });
+  lbl.textContent = (last.partial ? "part month " : "") + usd(last.cost);
+  svg.appendChild(lbl);
+
+  const peak = months.reduce((a, b) => b.cost > a.cost ? b : a), pi = months.indexOf(peak);
+  if (pi !== li) {
+    svg.appendChild(mk("circle", { cx: x(pi), cy: y(peak.cost), r: 4.5, fill: "var(--accent-mark)",
+      stroke: "var(--paper)", "stroke-width": 2 }));
+    const pl = mk("text", { x: x(pi), y: y(peak.cost) - 11, "text-anchor": "middle",
+      fill: "var(--ink-2)", "font-size": 11, "font-family": "var(--sans)", "font-weight": 500 });
+    pl.textContent = usd(peak.cost);
+    svg.appendChild(pl);
+  }
+
+  const cross = mk("line", { y1: m.t, y2: m.t + ih, stroke: "var(--rule)", "stroke-width": 1,
+    opacity: 0 });
+  const dot = mk("circle", { r: 4.5, fill: "var(--accent-mark)", stroke: "var(--paper)",
+    "stroke-width": 2, opacity: 0 });
+  svg.append(cross, dot);
+  const hit = mk("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" });
+  svg.appendChild(hit);
+  const move = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) / r.width * W;
+    let i = Math.round((px - m.l) / (iw || 1) * (months.length - 1));
+    i = Math.max(0, Math.min(months.length - 1, i));
+    const d = months[i];
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+    dot.setAttribute("cx", x(i)); dot.setAttribute("cy", y(d.cost)); dot.setAttribute("opacity", 1);
+    tip.hidden = false;
+    tip.innerHTML = `${monthLabel(d.month)}${d.partial ? " (partial)" : ""}<br><b>${usd(d.cost, true)}</b>`
+      + ` · ${Math.round(d.hours).toLocaleString()} h`;
+    const hr = host.getBoundingClientRect(), wr = host.parentElement.getBoundingClientRect();
+    tip.style.left = (hr.left - wr.left + x(i) / W * hr.width) + "px";
+    tip.style.top = (hr.top - wr.top + y(d.cost) / H * hr.height - 10) + "px";
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => {
+    tip.hidden = true; cross.setAttribute("opacity", 0); dot.setAttribute("opacity", 0);
+  });
+  host.appendChild(svg);
+}
+drawLabor();
+new ResizeObserver(drawLabor).observe(host);
+
+/* ---------- footer ---------- */
+document.getElementById("foot").innerHTML =
+  `Built from <code>${D.source}</code> — ${D.counts.rows.toLocaleString()} rows, `
+  + `${D.counts.line_items.toLocaleString()} line items, ${D.counts.codes} cost codes. `
+  + `Reallocation rules live in <code>tools/jobcost/cost_code_map.json</code>; `
+  + `re-run <code>reconcile.py</code> after editing them to rebuild this page and the workbook.`;
+</script>
