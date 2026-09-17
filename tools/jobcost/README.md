@@ -24,6 +24,7 @@ That writes three files into `out/`:
 |---|---|
 | `Philips_JobCost_Reallocated.xlsx` | Six tabs: work packages, cost sitting on the wrong line, per-code detail, every reallocation with its reason, before/after, and the flags |
 | `job_cost_dashboard.html` | The one-screen read — headline position, the six trades, all 52 work packages, cost sitting on the wrong line, flags, and crew hours |
+| `job_cost_dashboard_standalone.html` | The same page with its own HTML wrapper, for emailing to someone outside the Claude workspace. Opens in any browser, desktop or phone |
 | `summary.json` | The numbers behind both of the above |
 
 ## Changing how codes group into packages
